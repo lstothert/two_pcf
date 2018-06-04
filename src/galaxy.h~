@@ -1,0 +1,20 @@
+#pragma once
+#include "cosmology.h"
+
+class Galaxy {
+
+public:
+
+	double ra;
+	double dec;
+	double z;
+	double d_comov;
+
+	double x[4];
+	float half_x_norm[4];
+
+	float weight;
+
+	void ang_z_to_cartesian(Cosmology cosmo);
+
+};

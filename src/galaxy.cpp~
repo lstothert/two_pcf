@@ -1,0 +1,38 @@
+#include "cosmology.h"
+#include "galaxy.h"
+#define _USE_MATH_DEFINES
+#include <math.h>
+#include <iostream>
+
+void Galaxy::ang_z_to_cartesian(Cosmology cosmo){
+
+	const double deg_to_rad = M_PI/180.0;
+
+	d_comov = cosmo.comov_dist(z);
+	x[0] = d_comov*cos(deg_to_rad*dec)*cos(deg_to_rad*ra);
+	x[1] = d_comov*cos(deg_to_rad*dec)*sin(deg_to_rad*ra);
+	x[2] = d_comov*sin(deg_to_rad*dec);
+	x[3] = 0.0;
+
+	double modx = sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
+
+	half_x_norm[0] = 0.5*x[0] / modx;
+	half_x_norm[1] = 0.5*x[1] / modx;
+	half_x_norm[2] = 0.5*x[2] / modx;
+	half_x_norm[3] = 0.0;
+
+	/*
+	std::cout << ra << "\n";
+	std::cout << dec << "\n";
+	std::cout << z << "\n";
+	std::cout << d_comov << "\n";
+	std::cout << x[0] << "\n";
+	std::cout << x[1] << "\n";
+	std::cout << x[2] << "\n";
+	std::cout << half_x_norm[0] << "\n";
+	std::cout << half_x_norm[1] << "\n";
+	std::cout << half_x_norm[2] << "\n";
+	std::cin >> modx;
+	*/
+
+}

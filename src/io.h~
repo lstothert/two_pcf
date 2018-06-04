@@ -1,0 +1,59 @@
+#pragma once
+#include <string>
+#include "galaxy.h"
+#include "hist.h"
+
+class Params {
+
+public:
+
+	std::string data_filename;
+	std::string random_filename;
+	std::string param_filename;
+
+	bool use_weights = 0;
+	int n_threads = 1;
+
+	double omega_m = 0.3;
+	double h = 1.0;
+	double z_min = 0.0;
+	double z_max = 3.0;
+
+	bool plot_monopole = 0;
+	std::string monopole_filename = "monopole.txt";
+	bool monopole_log = 0;
+	double monopole_min = 0.0;
+	double monopole_max = 50.0;
+	int monopole_n_bins = 50;
+
+	bool plot_sigma_pi = 1;
+	std::string sigma_pi_filename = "sigma_pi.txt";
+	bool sigma_log = 0;
+	double sigma_min = 0.0;
+	double sigma_max = 50.0;
+	int sigma_n_bins = 50;
+	bool pi_log = 0;
+	double pi_min = 0.0;
+	double pi_max = 50.0;
+	int pi_n_bins = 50;
+
+	bool plot_s_mu = 1;
+	std::string s_mu_filename = "s_mu.txt";
+	bool s_log = 0;
+	double s_min = 0.0;
+	double s_max = 50.0;
+	int s_n_bins = 50;
+	int mu_n_bins = 20;
+
+	double box_size = -1.0;
+	double max_r_sq = -1.0;
+
+	Params(std::string input_filename);
+
+};
+
+int read_data(std::string filename, Galaxy **cat, Cosmology cosmo, bool use_weights=0);
+
+double ls_estimator(double DD, double DR, double RR, int n_D, int n_R);
+void output_xi_1D(std::string filename, Hist *DD, Hist *DR, Hist *RR, int n_gals, int n_randoms);
+void output_xi_2D(std::string filename, Hist2D *DD, Hist2D *DR, Hist2D *RR, int n_gals, int n_randoms);

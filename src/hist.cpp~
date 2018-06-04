@@ -1,0 +1,194 @@
+#include "hist.h"
+#include <math.h>
+#include <stdlib.h>
+#include <omp.h>
+
+Axis::Axis(float input_min, float input_max, int input_n_bins) {
+	min = input_min;
+	minus_min = -input_min;
+	max = input_max;
+	n_bins = input_n_bins;
+	step = (max - min) / (float)n_bins;
+	inv_step = 1.0 / step;
+}
+
+AxisLog::AxisLog(float input_min, float input_max, int input_n_bins) : Axis(input_min, input_max, input_n_bins) {
+
+  n_bins_div_log1p_n_bins = (float)input_n_bins/log1pf(input_n_bins);
+
+};
+
+double Axis::bin_centre(const int bin_num) {
+	return this->value_from_bin(bin_num + 0.5);
+}
+
+double Axis::bin_width(const int bin_num) {
+	return this->value_from_bin(bin_num + 1.0) - this->value_from_bin(bin_num);
+}
+
+int Axis::bin_num(const float value) {
+  return (value + minus_min)*inv_step;
+}
+
+double Axis::value_from_bin(double bin_num) {
+	return min + bin_num*step;
+}
+
+int AxisLog::bin_num(const float value) {
+	return n_bins_div_log1p_n_bins * log1pf( (value + minus_min) * inv_step);
+}
+
+double AxisLog::value_from_bin(double bin_num) {
+  return step*(exp(bin_num / n_bins_div_log1p_n_bins) - 1) + min;
+}
+
+Hist::Hist(float input_min, float input_max, int input_n_bins, bool axis_log) {
+
+	if (axis_log) {
+		ax = new AxisLog(input_min, input_max, input_n_bins);
+	}
+	else {
+		ax = new Axis(input_min, input_max, input_n_bins);
+	}
+
+	value_sum = (double*)calloc(ax->n_bins, sizeof(double));
+	bins = (double*)calloc(ax->n_bins, sizeof(double));
+
+};
+
+ double Hist::total_hist() {
+	double hist_total = 0;
+	for (int ii = 0; ii < ax->n_bins; ++ii)
+		hist_total += bins[ii];
+	return hist_total;
+}
+
+double Hist::bin_avg(int bin_num) {
+
+	if (bin_num < ax->n_bins && bin_num >= 0) {
+		if (bins[bin_num] > 0) {
+			return value_sum[bin_num] / bins[bin_num];
+		}
+		else {
+			return ax->bin_centre(bin_num);
+		}
+	}
+	else {
+	  return 0.0;
+	}
+
+}
+
+void Hist::add(const int bin_num, const float weight) {
+
+	if (bin_num < ax->n_bins && bin_num >= 0) {
+#pragma omp atomic
+		bins[bin_num] += weight;
+	}
+
+}
+
+void Hist::add(const float value, const float weight) {
+
+	if (value > ax->min && value < ax->max) {
+#pragma omp atomic
+		bins[ax->bin_num(value)] += weight;
+	}
+
+}
+
+void Hist::add_to_hist_and_avg(const float value, const float weight) {
+
+	if (value > ax->min && value < ax->max) {
+		int bin_num = ax->bin_num(value);
+#pragma omp atomic
+		bins[bin_num] += weight;
+#pragma omp atomic
+		value_sum[bin_num] += weight*value;
+	}
+
+}
+
+Hist2D::Hist2D(float input_min_1, float input_max_1, int input_n_bins_1, bool axis_1_log,
+	float input_min_2, float input_max_2, int input_n_bins_2, bool axis_2_log) {
+
+	if (axis_1_log) {
+		ax[0] = new AxisLog(input_min_1, input_max_1, input_n_bins_1);
+	}
+	else {
+		ax[0] = new Axis(input_min_1, input_max_1, input_n_bins_1);
+	}
+
+	if (axis_2_log) {
+		ax[1] = new AxisLog(input_min_2, input_max_2, input_n_bins_2);
+	}
+	else {
+		ax[1] = new Axis(input_min_2, input_max_2, input_n_bins_2);
+	}
+
+	value_sum_axis[0] = (double*)calloc(ax[0]->n_bins*ax[1]->n_bins, sizeof(double));
+	value_sum_axis[1] = (double*)calloc(ax[0]->n_bins*ax[1]->n_bins, sizeof(double));
+	bins = (double*)calloc(ax[0]->n_bins*ax[1]->n_bins, sizeof(double));
+
+}
+
+double Hist2D::total_hist() {
+	double hist_total = 0;
+	for (int ii = 0; ii < ax[0]->n_bins; ++ii)
+		for(int jj=0; jj < ax[1]->n_bins; ++jj)
+			hist_total += bins[ii*ax[1]->n_bins +jj];		
+	return hist_total;
+}
+
+double Hist2D::bin_avg(int bin_num_1, int bin_num_2, int axis) {
+
+	int total_bin = bin_num_1*ax[1]->n_bins + bin_num_2;
+	int bin_vec[2]; 
+	bin_vec[0] = bin_num_1;
+	bin_vec[1] = bin_num_2;
+	if (bin_num_1 < ax[0]->n_bins && bin_num_1 >= 0 && bin_num_2 < ax[1]->n_bins && bin_num_2 >= 0) {
+		if (bins[total_bin] > 0) {
+			return value_sum_axis[axis][total_bin] / bins[total_bin];
+		}
+		else {
+			return ax[axis]->bin_centre(bin_vec[axis]);
+		}
+	}
+	else {
+	  return 0.0;
+	}
+
+}
+
+void Hist2D::add(const int bin_num_1, const int bin_num_2, const float weight) {
+
+	if (bin_num_1 < ax[0]->n_bins && bin_num_1 >= 0 && bin_num_2 < ax[1]->n_bins && bin_num_2 >= 0) {
+#pragma omp atomic
+		bins[bin_num_1*ax[1]->n_bins + bin_num_2] += weight;
+	}
+
+}
+
+void Hist2D::add(const float value_1, const float value_2, const float weight) {
+
+	if (value_1 > ax[0]->min && value_1 < ax[0]->max && value_2 > ax[1]->min && value_2< ax[1]->max) {
+		int total_bin = ax[0]->bin_num(value_1) * ax[1]->n_bins + ax[1]->bin_num(value_2);
+#pragma omp atomic
+		bins[total_bin] += weight;
+	}
+
+}
+
+void Hist2D::add_to_hist_and_avg(const float value_1, const float value_2, const float weight) {
+
+	if (value_1 > ax[0]->min && value_1 < ax[0]->max && value_2 > ax[1]->min && value_2 < ax[1]->max) {
+		int total_bin = ax[0]->bin_num(value_1) * ax[1]->n_bins + ax[1]->bin_num(value_2);
+#pragma omp atomic
+		bins[total_bin] += weight;
+#pragma omp atomic
+		value_sum_axis[0][total_bin] += weight*value_1;
+#pragma omp atomic
+		value_sum_axis[1][total_bin] += weight*value_2;
+	}
+
+}

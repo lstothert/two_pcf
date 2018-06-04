@@ -1,0 +1,63 @@
+#pragma once
+
+class Axis {
+
+public:
+	int n_bins;
+	float min, minus_min, max, step, inv_step;
+	Axis(float input_min, float input_max, int input_n_bins);
+
+	double bin_centre(const int bin_num);
+	double bin_width(const int bin_num);
+	virtual double value_from_bin(double bin_num);
+	virtual int bin_num(const float value);
+
+};
+
+class AxisLog : public Axis {
+
+public:
+	AxisLog(float input_min, float input_max, int input_n_bins);
+
+	double value_from_bin(double bin_num);
+	int bin_num(const float value);
+
+};
+
+class Hist {
+
+public:
+
+	Axis *ax;
+	double *value_sum;
+	double *bins;
+
+	Hist(float input_min, float input_max, int input_n_bins, bool axis_log=0);
+
+	double total_hist();
+	double bin_avg(int bin_num);
+
+	void add(const int bin_num,const float weight = 1.0);
+	void add(const float value,const float weight = 1.0);
+	void add_to_hist_and_avg(const float value,const float weight = 1.0);
+
+};
+
+class Hist2D {
+
+public:
+	Axis *ax[2];
+	double *value_sum_axis[2];
+	double *bins;
+
+	Hist2D(float input_min_1, float input_max_1, int input_n_bins_1, bool axis_1_log, 
+		float input_min_2, float input_max_2, int input_n_bins_2, bool axis_2_log);
+
+	double total_hist();
+	double bin_avg(int bin_num_1, int bin_num_2, int axis);
+
+	void add(const int bin_num_1, const int bin_num_2, const float weight = 1.0);
+	void add(const float value_1, const float value_2, const float weight = 1.0);
+	void add_to_hist_and_avg(const float value_1, const float value_2, const float weight = 1.0);
+
+};
